@@ -2,7 +2,7 @@
 
 > **⚠️ EDUCATIONAL PURPOSES ONLY**
 >
-> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. The authors assume no liability for misuse.
+> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. I assume no liability for misuse.
 
 ---
 
