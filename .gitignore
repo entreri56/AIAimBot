@@ -1,0 +1,42 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Model files (large binaries - download/train your own)
+models/*.pt
+models/*.engine
+models/*.onnx
+!models/.gitkeep
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+.env.*
+
+# Debug logs
+*.log
+
+# Temporary files
+temp/
+tmp/
