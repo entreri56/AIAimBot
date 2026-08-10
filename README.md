@@ -96,7 +96,7 @@ models/
    - Example class setup: `0` = CT/Terrorist head, `1` = CT/Terrorist body
 
    Example annotated 640×640 frame:
-<img width="640" height="640" alt="capture_0003_2026-07-24_21-26-53-382" src="https://github.com/user-attachments/assets/1c8bd4f8-fb39-4fcc-8a12-84a0193f0c53" />
+   <img width="640" height="640" alt="capture_0003_2026-07-24_21-26-53-382" src="https://github.com/user-attachments/assets/1c8bd4f8-fb39-4fcc-8a12-84a0193f0c53" />
 
 
 3. **Train with YOLOv11** (lightweight, fast inference):
