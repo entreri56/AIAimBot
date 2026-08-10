@@ -2,7 +2,7 @@
 
 > **⚠️ EDUCATIONAL PURPOSES ONLY**
 >
-> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. I assume no liability for misuse.
+> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. The authors assume no liability for misuse.
 
 ---
 
@@ -11,16 +11,16 @@
 YoloAimBot is an AI-powered aim-assist tool built around **YOLO (You Only Look Once)** object detection. It runs on a **separate PC** (not the gaming PC) to avoid detection by anti-cheat systems.
 
 ```
-┌─────────────┐    HDMI    ┌──────────────┐    Virtual Cam/NDI    ┌──────────────┐      USB      ┌─────────────┐
-│  Gaming PC  │ ─────────→ │ Capture Card  │ ────────────────────→ │  This Bot    │ ────────────→ │   Gaming PC │
-│  (CS2/etc)  │            │   + OBS PC    │                       │  (Python)    │    MAKCU      │  (mouse in) │
-└─────────────┘            └──────────────┘                       └──────────────┘               └─────────────┘
+┌─────────────┐    HDMI    ┌──────────────┐    DirectShow/USB    ┌──────────────┐      USB      ┌─────────────┐
+│  Gaming PC  │ ─────────→ │ Capture Card │ ───────────────────→ │  This Bot    │ ────────────→ │   Gaming PC │
+│  (CS2/etc)  │            │              │                      │  (Python)    │    MAKCU      │  (mouse in) │
+└─────────────┘            └──────────────┘                      └──────────────┘               └─────────────┘
 ```
 
 1. **Gaming PC** outputs video over HDMI
-2. **Capture Card** receives the feed on a 2nd PC running OBS
-3. **OBS** outputs via Virtual Camera or NDI
-4. **This program** captures frames, runs YOLO detection, and calculates mouse movements
+2. **Capture Card** plugs into the 2nd PC via USB — appears as a DirectShow camera device
+3. **This program** reads frames directly from the capture card via OpenCV (`cv2.VideoCapture` + `CAP_DSHOW`) — **no OBS required**
+4. YOLO detection runs on each frame to find targets and calculate mouse movements
 5. **MAKCU** (Mouse And Keyboard Controlled via USB) sends movements back to the Gaming PC
 
 ---
@@ -31,8 +31,8 @@ YoloAimBot is an AI-powered aim-assist tool built around **YOLO (You Only Look O
 
 | Component | Purpose |
 |---|---|
-| **Capture card** | Captures HDMI output from gaming PC (e.g., Elgato HD60 X, AverMedia Live Gamer, or generic USB 3.0 HDMI capture dongle) |
-| **Second PC** | Runs OBS + this Python program — does NOT need a powerful GPU |
+| **Capture card** | Captures HDMI output from gaming PC (e.g., Elgato HD60 X, AverMedia Live Gamer, or generic USB 3.0 HDMI capture dongle). Plugs into the 2nd PC via USB and appears as a DirectShow camera — read directly by OpenCV. |
+| **Second PC** | Runs this Python program — does NOT need a powerful GPU |
 | **MAKCU device** | Hardware mouse emulator (Arduino/Teensy-based USB HID device) that connects via USB to the gaming PC |
 | **HDMI cable(s)** | To connect the gaming PC to the capture card |
 
@@ -41,9 +41,12 @@ YoloAimBot is an AI-powered aim-assist tool built around **YOLO (You Only Look O
 - AverMedia Live Gamer Ultra
 - Generic USB 3.0 HDMI Video Capture dongles ($15–$30 on Amazon/AliExpress)
 
+### Do I need OBS?
+**No.** The `opencv` capture mode reads the capture card directly via DirectShow — OBS is not required. OBS is only needed if you want to use the `ndi` capture mode (lowest latency), or if you prefer to route video through OBS Virtual Camera (e.g., for overlays or scene compositing).
+
 ### Why a capture card?
-- Anti-cheat software cannot detect screen capture happening on a **different physical machine**
-- OBS Virtual Camera presents the capture card feed as a webcam, which this program reads via OpenCV
+- Anti-cheat software cannot detect video capture happening on a **different physical machine**
+- The capture card appears as a standard DirectShow camera — OpenCV reads it directly with `cv2.VideoCapture()`
 ---
 
 ## 🚀 Quick Start
@@ -54,39 +57,101 @@ YoloAimBot is an AI-powered aim-assist tool built around **YOLO (You Only Look O
 pip install -r requirements.txt
 ```
 
-### 2. Get a YOLO model
+### 2. Plug in your capture card
 
-Train your own model or download a pre-trained one. Place it in the `models/` folder:
+1. Connect the **Gaming PC's HDMI out** → **Capture Card HDMI in**
+2. Plug the **Capture Card's USB** → **2nd PC**
+3. Verify it's detected:
+
+```bash
+python -c "import cv2; cap=cv2.VideoCapture(0,cv2.CAP_DSHOW); print('OK' if cap.isOpened() else 'FAIL'); cap.release()"
+```
+
+Or use the built-in debug viewer to list devices:
+```bash
+python debug_viewer_capture_card.py --list-devices
+```
+
+### 3. Train a YOLO model (or download one)
+
+You need a trained YOLO model that can detect players/heads in your game. Place the final `.pt` file in the `models/` folder:
+
 ```
 models/
   └── best.pt        ← your trained YOLO model
 ```
 
-For CS2, models are commonly trained on player/head datasets. Use `check_models.py` to verify:
-```bash
-python check_models.py
-```
+#### Training workflow:
 
-### 3. Set up OBS
+1. **Capture screenshots** from your game (via capture card). Aim for 640×640 resolution — this matches the YOLO inference size for best speed/accuracy balance. 500–2000 varied images is a good starting point.
 
+2. **Label your images** with [LabelImg](https://github.com/HumanSignal/labelImg) (free, open-source):
+   ```bash
+   pip install labelImg
+   labelImg
+   ```
+   - Open your screenshot folder
+   - Draw bounding boxes around players/heads
+   - Save in **YOLO format** (`.txt` files with class_id x_center y_center width height)
+   - Example class setup: `0` = CT/Terrorist head, `1` = CT/Terrorist body
+
+   Example annotated 640×640 frame:
+<img width="640" height="640" alt="capture_0003_2026-07-24_21-26-53-382" src="https://github.com/user-attachments/assets/1c8bd4f8-fb39-4fcc-8a12-84a0193f0c53" />
+
+
+3. **Train with YOLOv11** (lightweight, fast inference):
+   ```python
+   from ultralytics import YOLO
+
+   # Load a pretrained nano/small model (fast, low resource usage)
+   model = YOLO("yolo11n.pt")  # or yolo11s.pt for slightly better accuracy
+
+   # Train
+   model.train(
+       data="dataset/data.yaml",   # path to your dataset config
+       epochs=100,
+       imgsz=640,
+       batch=16,
+       device="cpu",               # or "cuda" / "mps"
+   )
+
+   # Export
+   model.export(format="onnx")     # optional: faster inference
+   ```
+
+   Copy the trained `best.pt` (from `runs/detect/train/weights/`) into `models/`.
+
+4. **Verify** your model's classes:
+   ```bash
+   python check_models.py
+   ```
+
+> **Tip:** YOLOv11n (nano) runs fast on CPU — ideal for the 2nd PC. If you have a GPU on the 2nd PC, use `yolo11s.pt` or `yolo11m.pt` for better accuracy. Any YOLOv5/v8/v10 model also works.
+
+### 4. (Optional) Set up OBS
+
+OBS is **not required** — the bot reads the capture card directly. Only set this up if you need:
+- **NDI mode** — for the lowest possible latency
+- **Virtual Camera** — if you want OBS overlays, scene compositing, or filters on the feed
+
+If using OBS:
 1. Install [OBS Studio](https://obsproject.com/)
-2. Add your capture card as a video source
-3. Enable **OBS Virtual Camera** (Tools → Virtual Camera → Start)
-4. (Optional) Install the [OBS-NDI plugin](https://github.com/obs-ndi/obs-ndi) for lower latency via NDI
+2. Add your capture card as a Video Capture Device source
+3. Start **Virtual Camera** (Tools → Virtual Camera) or install the [OBS-NDI plugin](https://github.com/obs-ndi/obs-ndi)
 
-### 4. Configure
+### 5. Configure
 
 Edit `config.py` or use the GUI:
 
 ```python
 # config.py key settings:
 CAPTURE_MODE  = "opencv"     # "opencv", "ndi", or "mss" (single-PC fallback)
-CAMERA_INDEX  = 0            # OBS Virtual Camera device index
+CAMERA_INDEX  = 0            # Capture card device index (use --list-devices to find)
 IN_GAME_SENS  = 1.25         # Match your in-game sensitivity
 HEAD_CLASSES  = [0, 1]       # Target class IDs (CS2: 0=CT, 1=T)
 ```
 
-### 5. Run
+### 6. Run
 
 ```bash
 # GUI mode (recommended):
@@ -126,8 +191,8 @@ run.bat
 
 | Mode | Latency | Setup | Use Case |
 |---|---|---|---|
-| **opencv** (DSHOW) | Low | OBS Virtual Camera | Primary — capture card via DirectShow |
-| **ndi** | Very Low | OBS + NDI plugin | Lowest latency NDI streaming |
+| **opencv** (DSHOW) | Low | None — reads capture card directly | Primary — capture card via DirectShow. No OBS needed. |
+| **ndi** | Very Low | OBS + NDI plugin | Lowest latency NDI streaming (requires OBS) |
 | **mss** | Medium | None | Single-PC fallback (⚠️ detectable) |
 
 ---
@@ -153,6 +218,9 @@ YoloAimBot/
 
 ## ❓ FAQ
 
+**Q: Do I need OBS?**
+A: **No.** The `opencv` mode reads the capture card directly via DirectShow — no OBS needed. OBS is only required for the `ndi` mode, or if you want to use Virtual Camera for overlays/filters.
+
 **Q: Can I run this on a single PC without a capture card?**
 A: The `mss` mode supports single-PC setups, but this is **highly detectable** by anti-cheat. A capture card + 2nd PC is the intended setup.
 
@@ -166,7 +234,7 @@ A: Using any external aim-assist in online games carries a ban risk. This projec
 
 ## ⚖️ Disclaimer
 
-**This software is provided for educational purposes only.** I do not endorse cheating in online games. By using this software, you acknowledge that:
+**This software is provided for educational purposes only.** The authors do not endorse cheating in online games. By using this software, you acknowledge that:
 
 1. You are solely responsible for how you use it
 2. Using this in online multiplayer games may violate the game's Terms of Service
