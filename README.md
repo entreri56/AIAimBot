@@ -166,7 +166,7 @@ A: Using any external aim-assist in online games carries a ban risk. This projec
 
 ## ⚖️ Disclaimer
 
-**This software is provided for educational purposes only.** The authors do not endorse cheating in online games. By using this software, you acknowledge that:
+**This software is provided for educational purposes only.** I do not endorse cheating in online games. By using this software, you acknowledge that:
 
 1. You are solely responsible for how you use it
 2. Using this in online multiplayer games may violate the game's Terms of Service
