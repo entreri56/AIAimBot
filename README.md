@@ -2,7 +2,7 @@
 
 > **⚠️ EDUCATIONAL PURPOSES ONLY**
 >
-> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. I assume no liability for misuse.
+> This project is intended **solely for educational and research purposes** — to explore computer vision, real-time object detection with YOLO, and hardware-in-the-loop systems. **It is not intended for use in competitive online games.** Using this software in multiplayer games may violate the game's Terms of Service and result in permanent bans. The authors assume no liability for misuse.
 
 ---
 
@@ -33,7 +33,7 @@ YoloAimBot is an AI-powered aim-assist tool built around **YOLO (You Only Look O
 |---|---|
 | **Capture card** | Captures HDMI output from gaming PC (e.g., Elgato HD60 X, AverMedia Live Gamer, or generic USB 3.0 HDMI capture dongle). Plugs into the 2nd PC via USB and appears as a DirectShow camera — read directly by OpenCV. |
 | **Second PC** | Runs this Python program — does NOT need a powerful GPU |
-| **MAKCU device** | Hardware mouse emulator (Arduino/Teensy-based USB HID device) that connects via USB to the gaming PC |
+| **MAKCU device** | Hardware mouse emulator (Arduino/Teensy-based USB HID). Plugs into the Gaming PC via USB. **Must have MAKCU firmware pre-flashed** — the Python `makcu` library (`pip install makcu`) communicates with it via USB serial to send mouse movements and read button states. |
 | **HDMI cable(s)** | To connect the gaming PC to the capture card |
 
 ### Recommended capture cards:
@@ -72,7 +72,19 @@ Or use the built-in debug viewer to list devices:
 python debug_viewer_capture_card.py --list-devices
 ```
 
-### 3. Train a YOLO model (or download one)
+### 3. Set up MAKCU
+
+The MAKCU hardware mouse emulator connects the 2nd PC (running this bot) to the Gaming PC via USB. The Gaming PC sees it as a standard mouse.
+
+1. **Hardware**: Get a MAKCU-compatible device (Arduino/Teensy with USB HID support)
+2. **Flash firmware**: Pre-flash the device with MAKCU firmware — the Python `makcu` library communicates with it over USB serial
+3. **Connect**: Plug the MAKCU into a USB port on the **Gaming PC**, then connect its serial/control side to the **2nd PC**
+4. **Install**: Already done via `pip install -r requirements.txt` (includes `makcu`)
+5. **Verify**: When the bot starts, you'll see `[MAKCU] Connecting...` → `[MAKCU] Connected!` in the console
+
+> ⚠️ MAKCU must have the firmware pre-flashed before use. The `makcu` Python library is an API that talks to already-flashed hardware — it does not flash the device itself.
+
+### 4. Train a YOLO model (or download one)
 
 You need a trained YOLO model that can detect players/heads in your game. Place the final `.pt` file in the `models/` folder:
 
@@ -96,7 +108,8 @@ models/
    - Example class setup: `0` = CT/Terrorist head, `1` = CT/Terrorist body
 
    Example annotated 640×640 frame:
-   <img width="640" height="640" alt="capture_0003_2026-07-24_21-26-53-382" src="https://github.com/user-attachments/assets/1c8bd4f8-fb39-4fcc-8a12-84a0193f0c53" />
+
+   ![Annotated 640x640 screenshot](https://github.com/user-attachments/assets/1c8bd4f8-fb39-4fcc-8a12-84a0193f0c53)
 
 
 3. **Train with YOLOv11** (lightweight, fast inference):
@@ -128,7 +141,7 @@ models/
 
 > **Tip:** YOLOv11n (nano) runs fast on CPU — ideal for the 2nd PC. If you have a GPU on the 2nd PC, use `yolo11s.pt` or `yolo11m.pt` for better accuracy. Any YOLOv5/v8/v10 model also works.
 
-### 4. (Optional) Set up OBS
+### 5. (Optional) Set up OBS
 
 OBS is **not required** — the bot reads the capture card directly. Only set this up if you need:
 - **NDI mode** — for the lowest possible latency
@@ -139,7 +152,7 @@ If using OBS:
 2. Add your capture card as a Video Capture Device source
 3. Start **Virtual Camera** (Tools → Virtual Camera) or install the [OBS-NDI plugin](https://github.com/obs-ndi/obs-ndi)
 
-### 5. Configure
+### 6. Configure
 
 Edit `config.py` or use the GUI:
 
@@ -151,7 +164,7 @@ IN_GAME_SENS  = 1.25         # Match your in-game sensitivity
 HEAD_CLASSES  = [0, 1]       # Target class IDs (CS2: 0=CT, 1=T)
 ```
 
-### 6. Run
+### 7. Run
 
 ```bash
 # GUI mode (recommended):
@@ -221,6 +234,9 @@ YoloAimBot/
 **Q: Do I need OBS?**
 A: **No.** The `opencv` mode reads the capture card directly via DirectShow — no OBS needed. OBS is only required for the `ndi` mode, or if you want to use Virtual Camera for overlays/filters.
 
+**Q: What is MAKCU and do I need special hardware?**
+A: MAKCU (Mouse And Keyboard Controlled via USB) is a hardware device that emulates a mouse on the Gaming PC. You need a compatible Arduino/Teensy board **pre-flashed with MAKCU firmware**. The `makcu` Python library (`pip install makcu`) is an API client — it talks to already-flashed hardware over USB serial. It does not flash firmware itself. Once connected, the bot sends mouse movement commands and reads button states (e.g., right-click to toggle aim).
+
 **Q: Can I run this on a single PC without a capture card?**
 A: The `mss` mode supports single-PC setups, but this is **highly detectable** by anti-cheat. A capture card + 2nd PC is the intended setup.
 
@@ -234,7 +250,7 @@ A: Using any external aim-assist in online games carries a ban risk. This projec
 
 ## ⚖️ Disclaimer
 
-**This software is provided for educational purposes only.** I do not endorse cheating in online games. By using this software, you acknowledge that:
+**This software is provided for educational purposes only.** The authors do not endorse cheating in online games. By using this software, you acknowledge that:
 
 1. You are solely responsible for how you use it
 2. Using this in online multiplayer games may violate the game's Terms of Service
